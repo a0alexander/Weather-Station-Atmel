@@ -30,7 +30,11 @@
 #include <gprsHead.h>
 #include <sdcard.h>
 #include <mainHead.h>
- 
+#include "RTClib.h"
+#include "DHT.h"
+
+#define DHTTYPE DHT11
+ #define DHTPIN 48
 // MCUFRIEND_kbv tft;
 int displayHeight, displayWidth;
 
@@ -43,14 +47,17 @@ uint16_t w, h;
 
 // enum FontSize{XSMALL,SMALL, MEDIUM,LARGE};
 
-
+DHT dht(DHTPIN, DHTTYPE);
 enum states{HOME, TEMPERATURE,DEF};			//FSM state initialization 
 volatile enum states state;								//enumerable initialization 
 volatile enum states current_state=DEF;
 
 int8_t btnPin = 19;
 int8_t btnPin2 = 18;
-int8_t btnPin3 = 43;
+int8_t btnPin3 = 25;
+
+
+extern RTC_DS1307 RTC;
 
 bool isDrawn;
 uint8_t hh,mm,ss;
@@ -61,6 +68,8 @@ void setup() {
     tft.reset();
     tft.begin();
     tft.setRotation(4);
+    setupRTC ();
+
 //    uint16_t accent2 = rgbto565(251, 222, 20);//yellow
 
 
@@ -71,7 +80,8 @@ void setup() {
 
     state = HOME;
     // drawTemperatureSensor();
-    
+
+
     setupBME();
     setupGPRS();
     pinMode(btnPin, INPUT_PULLUP);
@@ -81,9 +91,9 @@ attachInterrupt(digitalPinToInterrupt(btnPin), button1, LOW);
 attachInterrupt(digitalPinToInterrupt(btnPin2), button2, LOW);
 isDrawn = false;
 
-hh = conv2d(__TIME__);
-    mm = conv2d(__TIME__ + 3);
-    ss = conv2d(__TIME__ + 6);
+// hh = conv2d(__TIME__);
+//     mm = conv2d(__TIME__ + 3);
+//     ss = conv2d(__TIME__ + 6);
 
 }
 
@@ -137,36 +147,35 @@ unsigned long timeTrack;
 unsigned long lastTime = 1000;
 char prevDateString[20];
 char dateString[20];
-
+char readableDateString[20];
+  uint8_t hrsRTC;     
+   uint8_t minsRTC;     
+   uint8_t secsRTC;   
+   uint8_t dayRTC;      
+   uint8_t dayofWeekRTC;   
+   uint8_t monthNumRTC;   
+   char monthRTC[5];   
+char readableDate[10] ;
 
 void drawTime(int16_t hour,int16_t mins,int16_t sec){
 // int16_t hour,mins,sec;
 // char dateString[20];
-strcpy(dateString,"10 SEP 2020");
+// strcpy(dateString,"10 SEP 2020");
 timeTrack = millis();
 
 if(timeTrack-lastTime<1000){return;}
 
- tft.setFont(&FreeMonoBold9pt7b);
- if(strcmp(dateString,prevDateString)!=0){
-  placeText("Thursday SEP 10", 0.5, 0.02);
-  strcpy(prevDateString,dateString);
-
- }
+drawDate();
 
   tft.setFont(&FreeMonoBold12pt7b);
 
-      if (++ss > 59) {
-            ss = 0;
-            mm++;
-            if (mm > 59) {
-                mm = 0;
-                hh++;
-                if (hh > 23) hh = 0;
-            }
-        }
 
-sprintf(dateString,"%02d:%02d:%02d",hh,mm,ss);
+
+   hrsRTC = RTC.now().hour();     
+    secsRTC = RTC.now().second();     
+    minsRTC = RTC.now().minute();     
+
+sprintf(dateString,"%02d:%02d:%02d",hrsRTC,minsRTC,secsRTC);
   placeText(dateString, 0.5, 0.1);
 
 lastTime=timeTrack;
@@ -194,7 +203,7 @@ void drawTemperatureSensor(){
 if (isDrawn){
   return;
 }
-
+dht.begin();
     tft.setFont(&FreeMonoBold12pt7b);
 
     extern const uint16_t tempIcon3[];
@@ -209,11 +218,11 @@ if (isDrawn){
         tft.fillScreen(0x0000);
     
      tft.setFont(&FreeMonoBold9pt7b);
-    placeText("Thursday SEP 14",0.5,0.02);
+    // placeText("Thursday SEP 14",0.5,0.02);
     
     
     tft.setFont(&FreeMonoBold12pt7b);
-    placeText("23:59:29",0.5,0.1);
+    // placeText("23:59:29",0.5,0.1);
 
 //    tft.setFont(&FreeMonoBold9pt7b);
 //    tft.setTextColor(rgbto565(1,23,40));
@@ -221,6 +230,7 @@ if (isDrawn){
     
     
     placeIconMasked(sunIcon, 0.15, 0.3,60,rgbto565(255,220,00));
+    
     tft.setFont(&FreeMonoBold24pt7b);
     placeText("25.6C", 0.65,0.3);
 
@@ -233,11 +243,11 @@ if (isDrawn){
    
     placeText("Pressure", pressX,0.56);
     placeIcon(baroIcon,pressX,0.7,40 );
-    placeText("95.34 kPa", pressX,0.85);
+    placeText("95.34", pressX,0.85);
     
     placeText("Humidity", humidX,0.55);
     placeIcon(humidIcon,humidX,0.7,40 );
-    placeText("87%", humidX,0.85);
+    placeText("87", humidX,0.85);
 
     isDrawn=true;
 
@@ -345,7 +355,7 @@ void placeText(char* s,float xPerc, float yPerc){
             
             //tft.fillRect(tmp.x1,tmp.y1, tmp.w,tmp.h,0x0000);
      tft.setCursor((int)(xPos-(txtWidth/2)),(int)(yPos+(txtHeight/2)));
-     tft.fillRect((int)(xPos-(txtWidth/2)),(int)(yPos-(txtHeight/2)),(int)txtWidth+5,(int)txtHeight+5,0x0000);
+     tft.fillRect((int)(xPos-(txtWidth/2)),(int)(yPos-(txtHeight/2)),(int)txtWidth+10,(int)txtHeight+5,0x0000);
 
       
          
@@ -388,7 +398,7 @@ void clearText(char* text, int xPos,int yPos){
 // extern enum homeStates;
 // extern homeStates selectionState;
 
-enum homeStates{TEMP,AQI,SOIL,GPS,FIRE,SET,DEF1,INIT};
+enum homeStates{TEMP,AQI,SOIL,GPS,LUX,SET,DEF1,INIT};
 extern volatile homeStates selectionState;
 
  bool dataOn=false;
@@ -403,18 +413,21 @@ drawBlinker(5,0.95,0.07,rgbto565(200,0,0),500);
 
 float T = bme.temperature;
 float P = bme.pressure;
+float H = dht.readHumidity();
 //char* temp, pres;
 //
 //Serial.println(temp);
 //Serial.println(pres);
 tft.setFont(&FreeMonoBold24pt7b);
 
-char tempe[10],pres[10];
+char tempe[10],pres[10],humid[10];
 memset(tempe,0,10);
 memset(pres,0,10);
+memset(humid,0,10);
 
 strncpy(tempe, float2String(T,3,1,"C"),10);
-strncpy(pres, float2String(P/1000,4,2," kPa"),10);
+strncpy(pres, float2String(P/1000,4,1,""),10);
+strncpy(humid, float2String(H,4,1,""),10);
 
 //float prese =  float2String(P/1000,3,1," kPa");
 
@@ -425,17 +438,28 @@ tft.setFont(&FreeMonoBold9pt7b);
 
 if(selectionState==TEMP&& !isnan(P)){
 tft.setFont(&FreeMonoBold9pt7b);
+  placeText("kPa", 0.25,0.95);
+changeFontSize(MEDIUM);
   placeText(pres, 0.25,0.85);
+  
 Serial.println(tempe);
+}
+
+if(selectionState==TEMP&& !isnan(H)){
+tft.setFont(&FreeMonoBold9pt7b);
+  placeText("%", 0.75,0.95);
+changeFontSize(MEDIUM);
+  placeText(humid, 0.75,0.85);
+Serial.println(humid);
 }
 
 tft.setFont(&FreeMonoBold12pt7b);
 
-
+ writeToSD(T,P);
 
 if(dataOn==true){
-  placeText("DATA ON",0.5,0.9);
-  sendDataCloud(T,P);
+  // placeText("DATA ON",0.5,0.9);
+  sendDataCloud(T,P,H);
   drawBlinker(5,0.9,0.1,rgbto565(255,0,222),200);
 
 }
@@ -470,6 +494,7 @@ memset(charbuf2,0,12);
 
 dtostrf(T1, numLength, numDeci, charbuf);
 sprintf(charbuf2,"%s%s",charbuf,unit);
+
 return charbuf2;
 
 
@@ -643,3 +668,101 @@ tft.fillCircle(x0,y0,r,rgbto565(124,3,37));
 
 
 }
+
+
+void getReadableDay(uint8_t dayOfWeek, uint8_t monthNumRTC){
+
+// Serial.println(dayOfWeek);
+    switch(dayOfWeek){
+  case 0:
+    
+    strcpy(readableDate,"Sunday");
+    break;
+  case 1:
+        strcpy(readableDate,"Monday");
+
+    break;
+  case 2:
+    strcpy(readableDate,"Tuesday");
+
+    break;
+  case 3:
+    strcpy(readableDate,"Wednesday");
+
+    break;
+  case 4:
+    strcpy(readableDate,"Thursday");
+
+    break;
+  case 5:
+       strcpy(readableDate,"Friday");
+    break;
+  case 6:
+       strcpy(readableDate,"Saturday");
+
+    break;
+  }
+
+switch(monthNumRTC){
+  case 1:
+    strcpy(monthRTC," JAN");
+  break;  case 2:
+    strcpy(monthRTC," FEB");
+  break;  case 3:
+    strcpy(monthRTC," MAR");
+  break;  case 4:
+    strcpy(monthRTC," APR");
+  break;  case 5:
+    strcpy(monthRTC," MAY");
+  break;  case 6:
+    strcpy(monthRTC," JUN");
+  break;  case 7:
+    strcpy(monthRTC," JUL");
+  break;  case 8:
+    strcpy(monthRTC," AUG");
+  break;  case 9:
+    strcpy(monthRTC," SEP");
+  break;  case 10:
+    strcpy(monthRTC," OCT");
+  break;
+    case 11:
+    strcpy(monthRTC," NOV");
+  break;
+    case 12:
+    strcpy(monthRTC,"DEC");
+  break;
+
+
+}
+
+}
+
+void drawDate(){
+
+   tft.setFont(&FreeMonoBold9pt7b);
+
+
+
+// Serial.println(readableDate);
+
+ 
+
+   dayofWeekRTC  = RTC.now().dayOfTheWeek();
+monthNumRTC=RTC.now().month();
+dayRTC = RTC.now().day();
+
+getReadableDay(dayofWeekRTC,monthNumRTC);
+
+sprintf(readableDateString,"%s %s %02d",readableDate,monthRTC,dayRTC);
+
+// strcat(readableDate,monthRTC);
+
+  placeText(readableDateString, 0.5, 0.02);
+  // strcpy(prevDateString,readableDateString);
+
+ 
+}
+
+
+
+

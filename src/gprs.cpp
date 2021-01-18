@@ -14,6 +14,8 @@ float scaler = 0.4;
 void setupGPRS()
 {
   Serial3.begin(9600);               // the GPRS baud rate   
+  // Serial2.end() ;              // the GPRS baud rate   
+              // the GPRS baud rate   
 //  Serial.begin(9600);    // the GPRS baud rate 
   
  
@@ -26,17 +28,17 @@ netStates netProcess= BEGIN;
 int duration=500;
 bool isEnable = true;
 float commonDelay = 2;
-void sendDataCloud(float temp, float pres)
+void sendDataCloud(float temp, float pres,float humid)
 {
    
       
    
 // ShowSerialData();
 
-nextStep(commonDelay);
+nextStep(commonDelay*3);
 
 if(isEnable){
-setAction(temp,pres);
+setAction(temp,pres,humid);
 
 }
 else{
@@ -67,9 +69,17 @@ char byteBuffer[20];
 
 
 
-void sendData(float temp, float pres){
+void sendData(float temp, float pres,float humid){
 
-  String str="GET https://api.thingspeak.com/update?api_key=HRYEH3NC0KV22OK5&field1="+String(temp)+"&field2="+(pres);
+  // String str="GET https://api.thingspeak.com/update?api_key=HRYEH3NC0KV22OK5&field1="+String(temp)+"&field2="+(pres);
+  String str="GET http://us-central1-project1-36240.cloudfunctions.net/testFunction1/post/?field1="+
+  String(temp)+
+  "&field2="+
+  (pres)+
+    "&field3="+
+  (humid)+
+  "&field9=60&uid=IgKCceAuWmRC2oPNl0ozlHmxAUA3";
+  
   Serial3.println(str);
 }
 
@@ -78,8 +88,8 @@ void resetBuffer() {
   buffChar = 0;
 }
 
-void setAction(float temp, float pres){
-
+void setAction(float temp, float pres,float humid){
+// delay(2000);
 Serial.print("current netProcess ");
 Serial.println(netProcess);
 // ShowSerialData();
@@ -94,10 +104,10 @@ case APN:Serial3.println("AT+CSTT=\"hutch3g\"");commonDelay = 0.5;break;
 case CIIR:Serial3.println("AT+CIICR");commonDelay = 2;break;
 case CIFSR:Serial3.println("AT+CIFSR");commonDelay = 1;break;
 case CIPSPRT:Serial3.println("AT+CIPSPRT=0");commonDelay = 1;break;
-case CIPSTART:Serial3.println("AT+CIPSTART=\"TCP\",\"api.thingspeak.com\",\"80\"");
+case CIPSTART:Serial3.println("AT+CIPSTART=\"TCP\",\"us-central1-project1-36240.cloudfunctions.net\",\"80\"");
 commonDelay = 4;break;
 case CIPSEND:Serial3.println("AT+CIPSEND");commonDelay = 2;break;
-case UPLOADING:sendData( temp, pres);commonDelay = 1;break;
+case UPLOADING:sendData( temp, pres,humid);commonDelay = 1;break;
 case END:Serial3.println((char)26);commonDelay = 3;break;
 case GPRS_OFF:Serial3.println("AT+CIPSHUT");commonDelay = 1;break;
 default: netProcess = BEGIN;break;

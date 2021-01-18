@@ -73,3 +73,65 @@ void minMax(int val);
 int averageSoilVal(int val);
 
 void handleTemperatureCursor();
+void setupRTC ();
+void getRTCTime();
+void getReadableDay(uint8_t dayOfWeek,uint8_t monthRTC);
+void drawDate();
+
+
+void setupLux();
+void getLuminosity();
+void displayLux();
+void drawLightMeter(float fluxVal);
+
+
+void drawCircleColorRing(float xPerc, float yPerc,float bigRadius, float smallRadius, float percFull, int numCircles,int aqiChar);
+void setCircleRingColor(float perc,int x0, int y0, int r);
+void drawNotifierRect(int COval);
+
+void placeIcons();
+void displayMisc();
+void setupMisc();
+float calculateDewPoint(float T, float H);
+void displayAltitude();
+void moveCursor();
+
+class Icon{
+    public:
+        float xPerc;
+        float yPerc;
+        float wPerc;
+        float hPerc;
+        char* iconName;
+
+void createIcon(float xPerc,float yPerc,float wPerc,float hPerc,char* iconName){
+    this->xPerc = xPerc;
+    this->yPerc = yPerc;
+    this->wPerc = wPerc;
+    this->hPerc = hPerc;
+    this->iconName = iconName;
+
+
+}
+        
+
+};
+void selectIcon(Icon icon);
+void setIconText(Icon icon);
+
+void showMiscMenu();
+void initMiscVars();
+void initMiscDisplay();
+enum miscStates{TEMP_ALARM,ALTITUDE,RED,EXIT,INITIAL};
+void checkNextPressOnMisc();
+void miscIconSelector();
+void selectButtonMiscProcess();
+
+
+void setupTemp_Alarm();
+void displayTemperatureinAlarm();
+void showSetValue(uint8_t setTemperatureVal);
+void showSetValue();
+void checkIncrements();
+void sendSMS();
+void drawVisualTempAlarm();
